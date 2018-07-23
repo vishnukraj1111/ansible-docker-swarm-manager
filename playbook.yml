@@ -1,0 +1,13 @@
+- name: Setup Docker Swarm Manager 1
+  hosts: tag_swarmid_manager_primary
+  gather_facts: true
+  
+  vars: 
+    swarn_manager_port: 2377
+    swarm_network_name: #network name
+
+  become: yes
+
+  roles: 
+     - swarm_manager
+

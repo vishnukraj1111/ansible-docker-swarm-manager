@@ -1,0 +1,39 @@
+---
+  -  name: Check docker installed
+     yum: name=docker state=present
+
+  - name: Making sure docker is running
+    service:
+      name: docker
+      state: started
+
+  - name: Check docker info
+    shell: docker info
+    changed_when: False
+    register: docker_info
+
+  - name: Init "Swarm Mode" on the first manager.
+    shell: docker swarm init
+           --listen-addr {{ hostvars[groups['tag_swarmid_manager_primary'][0]].inventory_hostname }}:{{ swarn_manager_port }}
+           --advertise-addr {{ hostvars[groups['tag_swarmid_manager_primary'][0]].inventory_hostname }}
+    when: "docker_info.stdout.find('Swarm: active') == -1"
+
+  - name: Task history changing to zero
+    shell: docker swarm update --task-history-limit 0
+
+  - name: Create overlay network with attachable
+    shell: docker network create -d overlay --subnet 11.0.0.0/20 --attachable {{ swarm_network_name }}
+
+  - name: "get docker swarm manager token"
+    shell: docker swarm join-token -q manager
+    register: swarm_manager_token
+
+  - name: Saving manager token to file
+    local_action: copy content={{ swarm_manager_token.stdout }} dest=./swarm_manager_token
+
+  - name: "get docker swarm worker token"  
+    shell: docker swarm join-token -q worker
+    register: swarm_worker_token
+
+  - name: Saving worker token to file
+    local_action: copy content={{ swarm_worker_token.stdout }} dest=./swarm_worker_token
